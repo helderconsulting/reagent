@@ -1,6 +1,6 @@
 # Reagent
 
-**Reagent** is a React reconciler-based framework for building **MCP (Multi-Component Protocol) orchestration servers** using React’s declarative model instead of traditional UI rendering.
+**Reagent** is a React reconciler-based library for building **MCP orchestration servers** using React’s declarative model instead of traditional UI rendering.
 
 Instead of rendering to the DOM or native UI elements, Reagent lets you build complex MCP servers as React components. These components can:
 
