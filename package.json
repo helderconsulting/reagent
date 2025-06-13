@@ -1,0 +1,21 @@
+{
+  "name": "@helderconsulting/reagent",
+  "type": "module",
+  "version": "0.0.1",
+  "decription": "AI orchestration",
+  "exports": {
+    "import": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "keywords": [],
+  "author": "Tim Alaerts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/helderconsulting/reagent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/helderconsulting/reagent/issues"
+  },
+  "homepage": "https://github.com/helderconsulting/reagent#readme"
+}
