@@ -3,10 +3,20 @@
   "type": "module",
   "version": "0.0.1",
   "decription": "AI orchestration",
+  "bin": {
+    "reagent-test": "./dist/index.js"
+  },
   "exports": {
     "import": "./dist/index.js",
     "types": "./dist/index.d.ts"
   },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json && chmod 755 dist/index.js",
+    "start": "node dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "keywords": [],
   "author": "Tim Alaerts",
   "license": "MIT",
@@ -17,5 +27,15 @@
   "bugs": {
     "url": "https://github.com/helderconsulting/reagent/issues"
   },
-  "homepage": "https://github.com/helderconsulting/reagent#readme"
+  "homepage": "https://github.com/helderconsulting/reagent#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.3",
+    "react": "^19.1.0",
+    "react-reconciler": "^0.32.0",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/react-reconciler": "^0.32.0",
+    "typescript": "^5.8.3"
+  }
 }
