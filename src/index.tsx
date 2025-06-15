@@ -43,8 +43,9 @@ const planMealsInput = z.object({
 type PlanMealsInput = z.infer<typeof planMealsInput>;
 
 const MealPlanner = () => {
+  const [visible, setVisible] = useState(false);
   const [plan, setPlan] = useState<Record<days, string>>({});
-
+  const text = visible ? "visible" : "invisible";
   const handlePlanMealsCall = ({
     day,
     meal,
@@ -64,17 +65,61 @@ const MealPlanner = () => {
     };
   };
 
+  const handleToggleCall = (): CallToolResult => {
+    setVisible(!visible);
+    return {
+      content: [{ type: "text", text: "toggling new tool" }],
+    };
+  };
+
+  const handleToggledCall = (): CallToolResult => {
+    return {
+      content: [{ type: "text", text: "it works" }],
+    };
+  };
+
+  const handleVisibilityCall = (): CallToolResult => {
+    return {
+      content: [{ type: "text", text }],
+    };
+  };
+
+  const handleOverviewCall = (): CallToolResult => {
+    return {
+      content: [{ type: "text", text: JSON.stringify(plan, null, 4) }],
+    };
+  };
+
   return (
     <>
       <Tool name="get_meals" shape={{}} onCall={handleGetMealsCall} />
+      <Tool name="toggle" shape={{}} onCall={handleToggleCall}>
+        <Tool name="show_visibility" shape={{}} onCall={handleVisibilityCall} />
+        {visible ? (
+          <Tool
+            name="only_visible_when_toggled"
+            shape={{}}
+            onCall={handleToggledCall}
+          />
+        ) : null}
+      </Tool>
       <Tool
         name="plan_meals"
         shape={planMealsInput.shape}
         onCall={handlePlanMealsCall}
-      />
+      >
+        <Tool name="overview" shape={{}} onCall={handleOverviewCall} />
+      </Tool>
     </>
   );
 };
 
-const server = new McpServer({ name: "meal_planner", version: "1.0.0" });
+const server = new McpServer(
+  { name: "meal_planner", version: "1.0.0" },
+  {
+    capabilities: {
+      logging: {},
+    },
+  }
+);
 render(<MealPlanner />, server);

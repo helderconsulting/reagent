@@ -10,6 +10,5 @@ export type ToolProps<Shape extends ZodRawShape> = {
 };
 
 export const Tool = <Shape extends ZodRawShape>(props: ToolProps<Shape>) => {
-  console.log(`Tool: ${props.name}`);
   return <tool {...props} />;
 };
