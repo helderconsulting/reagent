@@ -22,6 +22,11 @@ const MealPlanner = () => {
       content: [{ type: "text", text: count.toString() }],
     };
   };
+  const handleGetCountCall = (): CallToolResult => {
+    return {
+      content: [{ type: "text", text: count.toString() }],
+    };
+  };
 
   const handleDecrementCall = (): CallToolResult => {
     setCount((count) => (count -= 1));
@@ -34,6 +39,7 @@ const MealPlanner = () => {
     <>
       <Tool name="increment" shape={{}} onCall={handleIncrementCall} />
       <Tool name={count.toString()} shape={{}} onCall={handleDecrementCall} />
+      <Tool name={"get_count"} shape={{}} onCall={handleGetCountCall} />
       {count > 1 ? (
         <Tool name={"bigger_than_one"} shape={{}} onCall={handleDecrementCall}>
           <Tool

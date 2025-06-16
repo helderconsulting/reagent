@@ -97,7 +97,12 @@ const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
     },
 
     commitUpdate(instance, type, prev, next, fiber) {
-      if (prev.name !== next.name) {
+      const shouldUpdate =
+        prev.name !== next.name ||
+        prev.onCall !== next.onCall ||
+        JSON.stringify(prev.shape) !== JSON.stringify(next.shape);
+
+      if (shouldUpdate) {
         toolset.remove(prev);
         toolset.add(next);
       }
