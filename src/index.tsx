@@ -1,34 +1,24 @@
-import { render } from "./renderer.js";
-import { Tool } from "./tool.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createRoot, render } from "./renderer.js";
+import { Tool, type ToolCallHandler } from "./tool.js";
 import { useState } from "react";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import z from "zod";
 
-const server = new McpServer(
-  { name: "meal_planner", version: "1.0.0" },
-  {
-    capabilities: {
-      logging: {},
-    },
-  }
-);
-
-const MealPlanner = () => {
+const Test = () => {
   const [count, setCount] = useState(0);
 
-  const handleIncrementCall = (): CallToolResult => {
+  const handleIncrementCall: ToolCallHandler<{ a: number }> = ({ a }) => {
     setCount((count) => (count += 1));
     return {
       content: [{ type: "text", text: count.toString() }],
     };
   };
-  const handleGetCountCall = (): CallToolResult => {
+  const handleGetCountCall: ToolCallHandler = () => {
     return {
       content: [{ type: "text", text: count.toString() }],
     };
   };
 
-  const handleDecrementCall = (): CallToolResult => {
+  const handleDecrementCall: ToolCallHandler = (a) => {
     setCount((count) => (count -= 1));
     return {
       content: [{ type: "text", text: count.toString() }],
@@ -37,7 +27,11 @@ const MealPlanner = () => {
 
   return (
     <>
-      <Tool name="increment" shape={{}} onCall={handleIncrementCall} />
+      <Tool
+        name="increment"
+        shape={{ a: z.number() }}
+        onCall={handleIncrementCall}
+      />
       <Tool name={count.toString()} shape={{}} onCall={handleDecrementCall} />
       <Tool name={"get_count"} shape={{}} onCall={handleGetCountCall} />
       {count > 1 ? (
@@ -53,4 +47,5 @@ const MealPlanner = () => {
   );
 };
 
-render(<MealPlanner />, server);
+const root = createRoot({ name: "test", version: "1" });
+render(<Test />, root);

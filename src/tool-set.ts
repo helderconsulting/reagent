@@ -12,6 +12,7 @@ type Node<Shape extends ZodRawShape> = {
   onCall: ToolCallback<Shape>;
 };
 
+// todo: handle recursive toolsets
 export class ToolSet<Shape extends ZodRawShape> {
   private tools = new Map<string, RegisteredTool>();
 

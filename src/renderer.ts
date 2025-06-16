@@ -8,6 +8,7 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ZodRawShape } from "zod";
 import { ToolSet } from "./tool-set.js";
+import type { Implementation } from "@modelcontextprotocol/sdk/types.js";
 
 type McpType = "tool" | "resource" | "prompt";
 
@@ -242,3 +243,10 @@ export async function render(
     await mcpServer.connect(transport);
   });
 }
+
+export const createRoot = (info: Implementation) =>
+  new McpServer(info, {
+    capabilities: {
+      logging: {},
+    },
+  });
