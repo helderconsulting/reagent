@@ -7,6 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ZodRawShape } from "zod";
+import { ToolSet } from "./tool-set.js";
 
 type McpType = "tool" | "resource" | "prompt";
 type Node<Shape extends ZodRawShape> = {
@@ -14,21 +15,11 @@ type Node<Shape extends ZodRawShape> = {
   name: string;
   shape: Shape;
   onCall: ToolCallback<Shape>;
-  nodes: Node<Shape>[];
-  append: (nodes: Node<Shape>[]) => void;
-};
-
-const update = (container: McpServer): (() => void) | null | undefined => {
-  return async () => {
-    const transport = new StdioServerTransport();
-    await container.connect(transport);
-    mcp = container;
-  };
 };
 
 type Type = McpType;
 type Props = Node<ZodRawShape>;
-type Container = McpServer;
+type Container = ToolSet<ZodRawShape>;
 type Instance = Node<ZodRawShape>;
 type TextInstance = never;
 type SuspenseInstance = never;
@@ -43,7 +34,7 @@ type TransitionStatus = { isTransition: boolean } | null;
 
 let mcp: McpServer | null = null;
 
-const createReconciler = () =>
+const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
   Reconciler<
     Type,
     Props,
@@ -61,13 +52,11 @@ const createReconciler = () =>
     TransitionStatus
   >({
     isPrimaryRenderer: true,
-    // old mode
     supportsMutation: true,
     supportsPersistence: false,
     warnsIfNotActing: false,
     supportsHydration: false,
 
-    // runs before server is connected
     createInstance(type, props) {
       if (type === "tool") {
         const { name, shape, onCall } = props;
@@ -76,12 +65,6 @@ const createReconciler = () =>
           name,
           shape,
           onCall,
-          nodes: [],
-          append: (nodes) => {
-            for (const node of nodes) {
-              mcp?.tool(node.name, node.shape, node.onCall);
-            }
-          },
         };
       }
 
@@ -93,16 +76,14 @@ const createReconciler = () =>
     },
 
     appendInitialChild(parent, child) {
-      if (child.type === "tool") {
-        mcp?.server.sendLoggingMessage({
-          level: "debug",
-          data: {
-            message: "appending initial child",
-            name: child.name,
-          },
-        });
-        parent.nodes.push(child);
-      }
+      mcp?.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "appending initial child",
+          name: child.name,
+        },
+      });
+      toolset.add(child);
     },
     appendChild(parent, child) {
       if (child.type === "tool") {
@@ -113,8 +94,7 @@ const createReconciler = () =>
             name: child.name,
           },
         });
-        parent.nodes.push(child);
-        parent.append([child]);
+        toolset.add(child);
       }
     },
     appendChildToContainer(container, child) {
@@ -125,19 +105,7 @@ const createReconciler = () =>
           name: child.name,
         },
       });
-      if (child.type === "tool") {
-        container.tool(child.name, child.shape, child.onCall);
-        for (const node of child.nodes) {
-          mcp?.server.sendLoggingMessage({
-            level: "debug",
-            data: {
-              message: "appending child to container",
-              name: node.name,
-            },
-          });
-          container.tool(node.name, node.shape, node.onCall);
-        }
-      }
+      toolset.add(child);
     },
     insertBefore(parentInstance, child, beforeChild) {
       mcp?.server.sendLoggingMessage({
@@ -158,6 +126,7 @@ const createReconciler = () =>
           child: child.name,
         },
       });
+      toolset.remove(child);
     },
     removeChildFromContainer(container, child) {
       mcp?.server.sendLoggingMessage({
@@ -167,36 +136,17 @@ const createReconciler = () =>
           child: child.name,
         },
       });
+      toolset.remove(child);
     },
     finalizeInitialChildren(instance, type, props, container, host) {
       mcp?.server.sendLoggingMessage({
         level: "debug",
         data: {
           message: "finalizeInitialChildren",
-          instance,
-          type,
-          props,
-          host,
         },
       });
       // triggers commitMount when true
       return true;
-    },
-
-    commitMount(instance, type, props, internalInstanceHandle) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "commitMount",
-          instance,
-          type,
-          props,
-        },
-      });
-    },
-
-    getPublicInstance(instance) {
-      return instance;
     },
 
     commitUpdate(instance, type, prev, next, fiber) {
@@ -205,13 +155,34 @@ const createReconciler = () =>
         data: {
           message: "commitUpdate",
           name: instance.name,
-          instance,
-          prev: prev.nodes,
-          next: next.nodes,
+          prev: prev.name,
+          next: next.name,
+        },
+      });
+      if (prev.name !== next.name) {
+        toolset.update(prev.name, next);
+      }
+    },
+
+    commitMount(instance, type, props, internalInstanceHandle) {
+      mcp?.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "commitMount",
         },
       });
     },
+
+    getPublicInstance(instance) {
+      return instance;
+    },
     prepareForCommit() {
+      mcp?.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "prepareForCommit",
+        },
+      });
       return null;
     },
     resetAfterCommit(container) {
@@ -238,9 +209,7 @@ const createReconciler = () =>
           message: "clearContainer",
         },
       });
-      if (container.isConnected()) {
-        container.close().catch(console.error);
-      }
+      toolset.removeAll();
     },
     preparePortalMount(containerInfo: unknown): void {
       return;
@@ -304,7 +273,7 @@ const createReconciler = () =>
       });
       return null;
     },
-    detachDeletedInstance: function (node: unknown): void {
+    detachDeletedInstance(node: unknown): void {
       mcp?.server.sendLoggingMessage({
         level: "debug",
         data: {
@@ -379,20 +348,25 @@ const PREFIX = "__REAGENT__";
 
 export async function render(
   element: React.ReactElement,
-  container: McpServer
+  mcpServer: McpServer
 ) {
-  const reconciler = createReconciler();
+  const toolset = new ToolSet(mcpServer);
+  const reconciler = createReconciler(toolset);
   const root = reconciler.createContainer(
-    container,
+    toolset,
     ConcurrentRoot,
     null,
     false,
     null,
     PREFIX,
     (e) => {
-      container.server.sendLoggingMessage({ level: "critical", data: e });
+      mcpServer.server.sendLoggingMessage({ level: "critical", data: e });
     },
     null
   );
-  reconciler.updateContainer(element, root, null, update(container));
+  reconciler.updateContainer(element, root, null, async () => {
+    const transport = new StdioServerTransport();
+    await mcpServer.connect(transport);
+    mcp = mcpServer;
+  });
 }
