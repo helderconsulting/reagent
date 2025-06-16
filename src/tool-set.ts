@@ -18,6 +18,15 @@ export class ToolSet<Shape extends ZodRawShape> {
   constructor(private mcpServer: McpServer) {}
 
   add(node: Node<Shape>) {
+    if (this.mcpServer.isConnected()) {
+      this.mcpServer.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "adding a tool",
+          name: node.name,
+        },
+      });
+    }
     const registeredTool = this.mcpServer.tool(
       node.name,
       node.shape,
@@ -26,16 +35,16 @@ export class ToolSet<Shape extends ZodRawShape> {
     this.tools.set(node.name, registeredTool);
   }
 
-  update(name: string, node: Node<Shape>) {
-    const tool = this.tools.get(name);
-    if (tool) {
-      this.tools.delete(name);
-      tool.remove();
-      this.add(node);
-    }
-  }
-
   remove(node: Node<Shape>) {
+    if (this.mcpServer.isConnected()) {
+      this.mcpServer.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "removing a tool",
+          name: node.name,
+        },
+      });
+    }
     const tool = this.tools.get(node.name);
     if (tool) {
       this.tools.delete(node.name);
@@ -44,6 +53,14 @@ export class ToolSet<Shape extends ZodRawShape> {
   }
 
   removeAll() {
+    if (this.mcpServer.isConnected()) {
+      this.mcpServer.server.sendLoggingMessage({
+        level: "debug",
+        data: {
+          message: "removing all tools",
+        },
+      });
+    }
     this.tools.forEach((tool) => tool.remove());
     this.tools.clear();
   }

@@ -10,6 +10,7 @@ import type { ZodRawShape } from "zod";
 import { ToolSet } from "./tool-set.js";
 
 type McpType = "tool" | "resource" | "prompt";
+
 type Node<Shape extends ZodRawShape> = {
   type: "tool";
   name: string;
@@ -31,8 +32,6 @@ type ChildSet = never;
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 type NoTimeout = -1;
 type TransitionStatus = { isTransition: boolean } | null;
-
-let mcp: McpServer | null = null;
 
 const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
   Reconciler<
@@ -76,123 +75,43 @@ const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
     },
 
     appendInitialChild(parent, child) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "appending initial child",
-          name: child.name,
-        },
-      });
       toolset.add(child);
     },
     appendChild(parent, child) {
       if (child.type === "tool") {
-        mcp?.server.sendLoggingMessage({
-          level: "debug",
-          data: {
-            message: "appending child",
-            name: child.name,
-          },
-        });
         toolset.add(child);
       }
     },
     appendChildToContainer(container, child) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "appendChildToContainer",
-          name: child.name,
-        },
-      });
       toolset.add(child);
     },
-    insertBefore(parentInstance, child, beforeChild) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "insertBefore",
-          parent: parent.name,
-          child: beforeChild.name,
-        },
-      });
-    },
+    insertBefore(parentInstance, child, beforeChild) {},
     removeChild(parent, child) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "removeChild",
-          parent: parent.name,
-          child: child.name,
-        },
-      });
       toolset.remove(child);
     },
     removeChildFromContainer(container, child) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "removeChildFromContainer",
-          child: child.name,
-        },
-      });
       toolset.remove(child);
     },
     finalizeInitialChildren(instance, type, props, container, host) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "finalizeInitialChildren",
-        },
-      });
-      // triggers commitMount when true
       return true;
     },
 
     commitUpdate(instance, type, prev, next, fiber) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "commitUpdate",
-          name: instance.name,
-          prev: prev.name,
-          next: next.name,
-        },
-      });
       if (prev.name !== next.name) {
-        toolset.update(prev.name, next);
+        toolset.remove(prev);
+        toolset.add(next);
       }
     },
 
-    commitMount(instance, type, props, internalInstanceHandle) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "commitMount",
-        },
-      });
-    },
+    commitMount(instance, type, props, internalInstanceHandle) {},
 
     getPublicInstance(instance) {
       return instance;
     },
     prepareForCommit() {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "prepareForCommit",
-        },
-      });
       return null;
     },
-    resetAfterCommit(container) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "resetAfterCommit",
-        },
-      });
-    },
+    resetAfterCommit(container) {},
     shouldSetTextContent() {
       return false;
     },
@@ -203,12 +122,6 @@ const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
       return context;
     },
     clearContainer(container) {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "clearContainer",
-        },
-      });
       toolset.removeAll();
     },
     preparePortalMount(containerInfo: unknown): void {
@@ -226,60 +139,21 @@ const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
     noTimeout: -1,
 
     getInstanceFromNode(node: any): Reconciler.Fiber | null | undefined {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "getInstanceFromNode",
-        },
-      });
       return node;
     },
     beforeActiveInstanceBlur(): void {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "beforeActiveInstanceBlur",
-        },
-      });
       return;
     },
     afterActiveInstanceBlur(): void {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "afterActiveInstanceBlur",
-        },
-      });
       return;
     },
     prepareScopeUpdate(scopeInstance: any, instance: any): void {
-      mcp?.server.sendLoggingMessage({
-        level: "info",
-        data: {
-          message: "prepareScopeUpdate",
-          scopeInstance,
-          instance,
-        },
-      });
       return;
     },
     getInstanceFromScope(scopeInstance: any) {
-      mcp?.server.sendLoggingMessage({
-        level: "info",
-        data: {
-          message: "getInstanceFromScope",
-          scopeInstance,
-        },
-      });
       return null;
     },
     detachDeletedInstance(node: unknown): void {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "detachDeletedInstance",
-        },
-      });
       return;
     },
     NotPendingTransition: null,
@@ -334,12 +208,6 @@ const createReconciler = (toolset: ToolSet<ZodRawShape>) =>
           initiateCommit: (...args: unknown[]) => unknown
         ) => (...args: unknown[]) => unknown)
       | null {
-      mcp?.server.sendLoggingMessage({
-        level: "debug",
-        data: {
-          message: "waitForCommitToBeReady",
-        },
-      });
       return null;
     },
   });
@@ -367,6 +235,5 @@ export async function render(
   reconciler.updateContainer(element, root, null, async () => {
     const transport = new StdioServerTransport();
     await mcpServer.connect(transport);
-    mcp = mcpServer;
   });
 }
